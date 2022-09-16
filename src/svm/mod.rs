@@ -155,6 +155,37 @@ impl<T: RealNumber, V: BaseVector<T>> Kernel<T, V> for SigmoidKernel<T> {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum KernelTypes<T: RealNumber> {
+    Linear,
+    RBF { gamma: T },
+    Sigmoid { gamma: T, coef0: T },
+    Polynomial { degree: T, gamma: T, coef0: T },
+}
+
+fn apply<T: RealNumber, V: BaseVector<T>>(kernel: &KernelTypes<T>, x_i: &V, x_j: &V) -> T {
+    match kernel {
+        KernelTypes::Polynomial {
+            degree,
+            gamma,
+            coef0,
+        } => {
+            let dot = x_i.dot(x_j);
+            (*gamma * dot + *coef0).powf(*degree)
+        }
+        KernelTypes::Sigmoid { gamma, coef0 } => {
+            let dot = x_i.dot(x_j);
+            (*gamma * dot + *coef0).tanh()
+        }
+        KernelTypes::RBF { gamma } => {
+            let v_diff = x_i.sub(x_j);
+            (-*gamma * v_diff.mul(&v_diff).sum()).exp()
+        }
+        KernelTypes::Linear => x_i.dot(x_j),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
