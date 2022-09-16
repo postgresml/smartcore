@@ -28,7 +28,7 @@
 //!
 //! ```
 //! use smartcore::linalg::naive::dense_matrix::*;
-//! use smartcore::svm::Kernels;
+//! use smartcore::svm::Kernel;
 //! use smartcore::svm::svc::{SVC, SVCParameters};
 //!
 //! // Iris dataset
@@ -84,7 +84,7 @@ use crate::error::Failed;
 use crate::linalg::BaseVector;
 use crate::linalg::Matrix;
 use crate::math::num::RealNumber;
-use crate::svm::KernelTypes;
+use crate::svm::Kernel;
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
@@ -97,7 +97,7 @@ pub struct SVCParameters<T: RealNumber, M: Matrix<T>> {
     /// Tolerance for stopping criterion.
     pub tol: T,
     /// The kernel function.
-    pub kernel: KernelTypes<T>,
+    pub kernel: Kernel<T>,
     /// Unused parameter.
     m: PhantomData<M>,
 }
@@ -113,7 +113,7 @@ pub struct SVCSearchParameters<T: RealNumber, M: Matrix<T>> {
     /// Tolerance for stopping epoch.
     pub tol: Vec<T>,
     /// The kernel function.
-    pub kernel: Vec<KernelTypes<T>>,
+    pub kernel: Vec<Kernel<T>>,
     /// Unused parameter.
     pub m: PhantomData<M>,
 }
@@ -195,7 +195,7 @@ impl<T: RealNumber, M: Matrix<T>> Default for SVCSearchParameters<T, M> {
             epoch: vec![default_params.epoch],
             c: vec![default_params.c],
             tol: vec![default_params.tol],
-            kernel: vec![KernelTypes::Linear],
+            kernel: vec![Kernel::Linear],
             m: PhantomData,
         }
     }
@@ -213,7 +213,7 @@ impl<T: RealNumber, M: Matrix<T>> Default for SVCSearchParameters<T, M> {
 /// Support Vector Classifier
 pub struct SVC<T: RealNumber, M: Matrix<T>> {
     classes: Vec<T>,
-    kernel: KernelTypes<T>,
+    kernel: Kernel<T>,
     instances: Vec<M::RowVector>,
     w: Vec<T>,
     b: T,
@@ -232,7 +232,7 @@ struct SupportVector<T: RealNumber, V: BaseVector<T>> {
 }
 
 struct Cache<'a, T: RealNumber, M: Matrix<T>> {
-    kernel: &'a KernelTypes<T>,
+    kernel: &'a Kernel<T>,
     data: HashMap<(usize, usize), T>,
     phantom: PhantomData<M>,
 }
@@ -247,7 +247,7 @@ struct Optimizer<'a, T: RealNumber, M: Matrix<T>> {
     gmax: T,
     tau: T,
     sv: Vec<SupportVector<T, M::RowVector>>,
-    kernel: &'a KernelTypes<T>,
+    kernel: &'a Kernel<T>,
     recalculate_minmax_grad: bool,
 }
 
@@ -268,7 +268,7 @@ impl<T: RealNumber, M: Matrix<T>> SVCParameters<T, M> {
         self
     }
     /// The kernel function.
-    pub fn with_kernel(&self, kernel: KernelTypes<T>) -> SVCParameters<T, M> {
+    pub fn with_kernel(&self, kernel: Kernel<T>) -> SVCParameters<T, M> {
         SVCParameters {
             epoch: self.epoch,
             c: self.c,
@@ -285,7 +285,7 @@ impl<T: RealNumber, M: Matrix<T>> Default for SVCParameters<T, M> {
             epoch: 2,
             c: T::one(),
             tol: T::from_f64(1e-3).unwrap(),
-            kernel: KernelTypes::Linear,
+            kernel: Kernel::Linear,
             m: PhantomData,
         }
     }
@@ -422,7 +422,7 @@ impl<T: RealNumber, M: Matrix<T>> PartialEq for SVC<T, M> {
 }
 
 impl<T: RealNumber, V: BaseVector<T>> SupportVector<T, V> {
-    fn new(i: usize, x: V, y: T, g: T, c: T, k: &KernelTypes<T>) -> SupportVector<T, V> {
+    fn new(i: usize, x: V, y: T, g: T, c: T, k: &Kernel<T>) -> SupportVector<T, V> {
         let k_v = crate::svm::apply(k, &x, &x);
         let (cmin, cmax) = if y > T::zero() {
             (T::zero(), c)
@@ -442,7 +442,7 @@ impl<T: RealNumber, V: BaseVector<T>> SupportVector<T, V> {
 }
 
 impl<'a, T: RealNumber, M: Matrix<T>> Cache<'a, T, M> {
-    fn new(kernel: &'a KernelTypes<T>) -> Cache<'a, T, M> {
+    fn new(kernel: &'a Kernel<T>) -> Cache<'a, T, M> {
         Cache {
             kernel,
             data: HashMap::new(),
@@ -474,7 +474,7 @@ impl<'a, T: RealNumber, M: Matrix<T>> Optimizer<'a, T, M> {
     fn new(
         x: &'a M,
         y: &'a M::RowVector,
-        kernel: &'a KernelTypes<T>,
+        kernel: &'a Kernel<T>,
         parameters: &'a SVCParameters<T, M>,
     ) -> Optimizer<'a, T, M> {
         let (n, _) = x.shape();
@@ -836,8 +836,8 @@ mod tests {
 
     #[test]
     fn search_parameters() {
-        let linear = KernelTypes::Linear;
-        let rbf = KernelTypes::RBF { gamma: 0.001 };
+        let linear = Kernel::Linear;
+        let rbf = Kernel::RBF { gamma: 0.001 };
         let parameters: SVCSearchParameters<f64, DenseMatrix<f64>> = SVCSearchParameters {
             epoch: vec![10, 100],
             kernel: vec![linear, rbf],
@@ -846,10 +846,16 @@ mod tests {
         let mut iter = parameters.into_iter();
         let next = iter.next().unwrap();
         assert_eq!(next.epoch, 10);
-        assert_eq!(next.kernel, KernelTypes::Linear);
+        assert_eq!(next.kernel, Kernel::Linear);
         let next = iter.next().unwrap();
         assert_eq!(next.epoch, 100);
-        assert_eq!(next.kernel, KernelTypes::Linear);
+        assert_eq!(next.kernel, Kernel::Linear);
+        let next = iter.next().unwrap();
+        assert_eq!(next.epoch, 10);
+        assert_eq!(next.kernel, Kernel::RBF { gamma: 0.001 });
+        let next = iter.next().unwrap();
+        assert_eq!(next.epoch, 100);
+        assert_eq!(next.kernel, Kernel::RBF { gamma: 0.001 });
         assert!(iter.next().is_none());
     }
 
@@ -888,7 +894,7 @@ mod tests {
             &y,
             SVCParameters::default()
                 .with_c(200.0)
-                .with_kernel(KernelTypes::Linear),
+                .with_kernel(Kernel::Linear),
         )
         .and_then(|lr| lr.predict(&x))
         .unwrap();
@@ -917,7 +923,7 @@ mod tests {
             &y,
             SVCParameters::default()
                 .with_c(200.0)
-                .with_kernel(KernelTypes::Linear),
+                .with_kernel(Kernel::Linear),
         )
         .and_then(|lr| lr.decision_function(&x2))
         .unwrap();
@@ -971,7 +977,7 @@ mod tests {
             &y,
             SVCParameters::default()
                 .with_c(1.0)
-                .with_kernel(KernelTypes::RBF { gamma: 0.7 }),
+                .with_kernel(Kernel::RBF { gamma: 0.7 }),
         )
         .and_then(|lr| lr.predict(&x))
         .unwrap();
