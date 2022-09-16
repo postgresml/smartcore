@@ -72,9 +72,9 @@ mod tests {
         LogisticRegression, LogisticRegressionSearchParameters,
     };
     use crate::metrics::{accuracy, recall};
-    use crate::model_selection::{train_test_split, KFold};
+    use crate::model_selection::KFold;
     use crate::svm::svc::{SVCSearchParameters, SVC};
-    use crate::svm::KernelTypes;
+    use crate::svm::Kernel;
 
     #[test]
     fn test_grid_search() {
@@ -128,15 +128,18 @@ mod tests {
     }
 
     #[test]
-    fn scikit_grid_search_parity_check() {
-        let digits = crate::dataset::breast_cancer::load_dataset();
-        let y = digits.target;
-        let x = DenseMatrix::from_array(digits.num_samples, digits.num_features, &digits.data);
-        let (x_train, x_test, y_train, y_test) = train_test_split(&x, &y, 0.5, true);
+    fn svm_check() {
+        let breast_cancer = crate::dataset::breast_cancer::load_dataset();
+        let y = breast_cancer.target;
+        let x = DenseMatrix::from_array(
+            breast_cancer.num_samples,
+            breast_cancer.num_features,
+            &breast_cancer.data,
+        );
         let kernels = vec![
-            KernelTypes::Linear,
-            KernelTypes::RBF { gamma: 0.001 },
-            KernelTypes::RBF { gamma: 0.0001 },
+            Kernel::Linear,
+            Kernel::RBF { gamma: 0.001 },
+            Kernel::RBF { gamma: 0.0001 },
         ];
         let parameters = SVCSearchParameters {
             kernel: kernels,
@@ -147,14 +150,6 @@ mod tests {
             n_splits: 5,
             ..KFold::default()
         };
-        let results = grid_search(
-            SVC::fit,
-            &x_train,
-            &y_train,
-            parameters.into_iter(),
-            cv,
-            &recall,
-        )
-        .unwrap();
+        grid_search(SVC::fit, &x, &y, parameters.into_iter(), cv, &recall).unwrap();
     }
 }
