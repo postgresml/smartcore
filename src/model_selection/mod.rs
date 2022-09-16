@@ -113,6 +113,7 @@ use rand::thread_rng;
 pub(crate) mod hyper_tuning;
 pub(crate) mod kfold;
 
+pub use hyper_tuning::{grid_search, GridSearchResult};
 pub use kfold::{KFold, KFoldIter};
 
 /// An interface for the K-Folds cross-validator
