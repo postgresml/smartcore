@@ -1,3 +1,9 @@
+use crate::api::Predictor;
+use crate::error::{Failed, FailedError};
+use crate::linalg::Matrix;
+use crate::math::num::RealNumber;
+use crate::model_selection::{cross_validate, BaseKFold, CrossValidationResult};
+
 /// grid search results.
 #[derive(Clone, Debug)]
 pub struct GridSearchResult<T: RealNumber, I: Clone> {
@@ -60,58 +66,95 @@ where
 
 #[cfg(test)]
 mod tests {
-  use crate::linear::logistic_regression::{
-    LogisticRegression, LogisticRegressionSearchParameters,
-};
+    use super::*;
+    use crate::linalg::naive::dense_matrix::*;
+    use crate::linear::logistic_regression::{
+        LogisticRegression, LogisticRegressionSearchParameters,
+    };
+    use crate::metrics::{accuracy, recall};
+    use crate::model_selection::{train_test_split, KFold};
+    use crate::svm::svc::{SVCSearchParameters, SVC};
+    use crate::svm::KernelTypes;
 
-  #[test]
-  fn test_grid_search() {
-      let x = DenseMatrix::from_2d_array(&[
-          &[5.1, 3.5, 1.4, 0.2],
-          &[4.9, 3.0, 1.4, 0.2],
-          &[4.7, 3.2, 1.3, 0.2],
-          &[4.6, 3.1, 1.5, 0.2],
-          &[5.0, 3.6, 1.4, 0.2],
-          &[5.4, 3.9, 1.7, 0.4],
-          &[4.6, 3.4, 1.4, 0.3],
-          &[5.0, 3.4, 1.5, 0.2],
-          &[4.4, 2.9, 1.4, 0.2],
-          &[4.9, 3.1, 1.5, 0.1],
-          &[7.0, 3.2, 4.7, 1.4],
-          &[6.4, 3.2, 4.5, 1.5],
-          &[6.9, 3.1, 4.9, 1.5],
-          &[5.5, 2.3, 4.0, 1.3],
-          &[6.5, 2.8, 4.6, 1.5],
-          &[5.7, 2.8, 4.5, 1.3],
-          &[6.3, 3.3, 4.7, 1.6],
-          &[4.9, 2.4, 3.3, 1.0],
-          &[6.6, 2.9, 4.6, 1.3],
-          &[5.2, 2.7, 3.9, 1.4],
-      ]);
-      let y = vec![
-          0., 0., 0., 0., 0., 0., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-      ];
+    #[test]
+    fn test_grid_search() {
+        let x = DenseMatrix::from_2d_array(&[
+            &[5.1, 3.5, 1.4, 0.2],
+            &[4.9, 3.0, 1.4, 0.2],
+            &[4.7, 3.2, 1.3, 0.2],
+            &[4.6, 3.1, 1.5, 0.2],
+            &[5.0, 3.6, 1.4, 0.2],
+            &[5.4, 3.9, 1.7, 0.4],
+            &[4.6, 3.4, 1.4, 0.3],
+            &[5.0, 3.4, 1.5, 0.2],
+            &[4.4, 2.9, 1.4, 0.2],
+            &[4.9, 3.1, 1.5, 0.1],
+            &[7.0, 3.2, 4.7, 1.4],
+            &[6.4, 3.2, 4.5, 1.5],
+            &[6.9, 3.1, 4.9, 1.5],
+            &[5.5, 2.3, 4.0, 1.3],
+            &[6.5, 2.8, 4.6, 1.5],
+            &[5.7, 2.8, 4.5, 1.3],
+            &[6.3, 3.3, 4.7, 1.6],
+            &[4.9, 2.4, 3.3, 1.0],
+            &[6.6, 2.9, 4.6, 1.3],
+            &[5.2, 2.7, 3.9, 1.4],
+        ]);
+        let y = vec![
+            0., 0., 0., 0., 0., 0., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
+        ];
 
-      let cv = KFold {
-          n_splits: 5,
-          ..KFold::default()
-      };
+        let cv = KFold {
+            n_splits: 5,
+            ..KFold::default()
+        };
 
-      let parameters = LogisticRegressionSearchParameters {
-          alpha: vec![0., 1.],
-          ..Default::default()
-      };
+        let parameters = LogisticRegressionSearchParameters {
+            alpha: vec![0., 1.],
+            ..Default::default()
+        };
 
-      let results = grid_search(
-          LogisticRegression::fit,
-          &x,
-          &y,
-          parameters.into_iter(),
-          cv,
-          &accuracy,
-      )
-      .unwrap();
+        let results = grid_search(
+            LogisticRegression::fit,
+            &x,
+            &y,
+            parameters.into_iter(),
+            cv,
+            &accuracy,
+        )
+        .unwrap();
 
-      assert!([0., 1.].contains(&results.parameters.alpha));
-  }
+        assert!([0., 1.].contains(&results.parameters.alpha));
+    }
+
+    #[test]
+    fn scikit_grid_search_parity_check() {
+        let digits = crate::dataset::breast_cancer::load_dataset();
+        let y = digits.target;
+        let x = DenseMatrix::from_array(digits.num_samples, digits.num_features, &digits.data);
+        let (x_train, x_test, y_train, y_test) = train_test_split(&x, &y, 0.5, true);
+        let kernels = vec![
+            KernelTypes::Linear,
+            KernelTypes::RBF { gamma: 0.001 },
+            KernelTypes::RBF { gamma: 0.0001 },
+        ];
+        let parameters = SVCSearchParameters {
+            kernel: kernels,
+            c: vec![0., 10., 100., 1000.],
+            ..Default::default()
+        };
+        let cv = KFold {
+            n_splits: 5,
+            ..KFold::default()
+        };
+        let results = grid_search(
+            SVC::fit,
+            &x_train,
+            &y_train,
+            parameters.into_iter(),
+            cv,
+            &recall,
+        )
+        .unwrap();
+    }
 }

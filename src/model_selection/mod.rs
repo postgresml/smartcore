@@ -110,6 +110,7 @@ use crate::math::num::RealNumber;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 
+pub(crate) mod hyper_tuning;
 pub(crate) mod kfold;
 
 pub use kfold::{KFold, KFoldIter};
