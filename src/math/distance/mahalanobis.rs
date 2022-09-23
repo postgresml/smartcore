@@ -54,10 +54,12 @@ use crate::linalg::Matrix;
 
 /// Mahalanobis distance.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct Mahalanobis<T: RealNumber, M: Matrix<T>> {
+    #[cfg_attr(feature = "serde", serde(default))]
     /// covariance matrix of the dataset
     pub sigma: M,
+    #[cfg_attr(feature = "serde", serde(default))]
     /// inverse of the covariance matrix
     pub sigmaInv: M,
     t: PhantomData<T>,

@@ -60,7 +60,10 @@ pub struct KNNClassifierParameters<T: RealNumber, D: Distance<Vec<T>, T>> {
     #[cfg_attr(feature = "serde", serde(default))]
     /// weighting function that is used to calculate estimated class value. Default function is `KNNWeightFunction::Uniform`.
     pub weight: KNNWeightFunction,
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default = "KNNClassifierParameters::<T, D>::default_k")
+    )]
     /// number of training samples to consider when estimating class for new point. Default value is 3.
     pub k: usize,
     #[cfg_attr(feature = "serde", serde(default))]
@@ -80,6 +83,10 @@ pub struct KNNClassifier<T: RealNumber, D: Distance<Vec<T>, T>> {
 }
 
 impl<T: RealNumber, D: Distance<Vec<T>, T>> KNNClassifierParameters<T, D> {
+    fn default_k() -> usize {
+        5
+    }
+
     /// number of training samples to consider when estimating class for new point. Default value is 3.
     pub fn with_k(mut self, k: usize) -> Self {
         self.k = k;
@@ -118,7 +125,7 @@ impl<T: RealNumber> Default for KNNClassifierParameters<T, Euclidian> {
             distance: Distances::euclidian(),
             algorithm: KNNAlgorithmName::default(),
             weight: KNNWeightFunction::default(),
-            k: 3,
+            k: Self::default_k(),
             t: PhantomData,
         }
     }
@@ -256,12 +263,20 @@ mod tests {
     use super::*;
     use crate::linalg::naive::dense_matrix::DenseMatrix;
 
+    #[cfg(feature = "serde")]
+    #[test]
+    fn serde_defaults() {
+        let defaults = KNNClassifierParameters::<f32, Euclidian>::default();
+        let params: KNNClassifierParameters<f32, Euclidian> = serde_json::from_str("{}").unwrap();
+        assert_eq!(params.k, defaults.k)
+    }
+
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[test]
     fn knn_fit_predict() {
         let x =
             DenseMatrix::from_2d_array(&[&[1., 2.], &[3., 4.], &[5., 6.], &[7., 8.], &[9., 10.]]);
-        let y = vec![2., 2., 2., 3., 3.];
+        let y = vec![2., 2., 2., 2., 2.];
         let knn = KNNClassifier::fit(&x, &y, Default::default()).unwrap();
         let y_hat = knn.predict(&x).unwrap();
         assert_eq!(5, Vec::len(&y_hat));

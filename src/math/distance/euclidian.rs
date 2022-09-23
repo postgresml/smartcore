@@ -27,7 +27,7 @@ use super::Distance;
 
 /// Euclidean distance is a measure of the true straight line distance between two points in Euclidean n-space.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct Euclidian {}
 
 impl Euclidian {

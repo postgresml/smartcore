@@ -30,8 +30,9 @@ use super::Distance;
 
 /// Defines the Minkowski distance of order `p`
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct Minkowski {
+    #[cfg_attr(feature = "serde", serde(default))]
     /// order, integer
     pub p: u16,
 }

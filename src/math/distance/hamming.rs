@@ -28,7 +28,7 @@ use super::Distance;
 
 /// While comparing two integer-valued vectors of equal length, Hamming distance is the number of bit positions in which the two bits are different
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct Hamming {}
 
 impl<T: PartialEq, F: RealNumber> Distance<Vec<T>, F> for Hamming {

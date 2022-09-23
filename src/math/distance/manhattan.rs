@@ -26,7 +26,7 @@ use super::Distance;
 
 /// Manhattan distance
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct Manhattan {}
 
 impl<T: RealNumber> Distance<Vec<T>, T> for Manhattan {

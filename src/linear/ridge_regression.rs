@@ -87,10 +87,13 @@ impl Default for RidgeRegressionSolverName {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
 pub struct RidgeRegressionParameters<T: RealNumber> {
+    #[cfg_attr(feature = "serde", serde(default))]
     /// Solver to use for estimation of regression coefficients.
     pub solver: RidgeRegressionSolverName,
+    #[cfg_attr(feature = "serde", serde(default))]
     /// Controls the strength of the penalty to the loss function.
     pub alpha: T,
+    #[cfg_attr(feature = "serde", serde(default))]
     /// If true the regressors X will be normalized before regression
     /// by subtracting the mean and dividing by the standard deviation.
     pub normalize: bool,

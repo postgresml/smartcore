@@ -63,7 +63,10 @@ pub struct KNNRegressorParameters<T: RealNumber, D: Distance<Vec<T>, T>> {
     #[cfg_attr(feature = "serde", serde(default))]
     /// weighting function that is used to calculate estimated class value. Default function is `KNNWeightFunction::Uniform`.
     pub weight: KNNWeightFunction,
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default = "KNNRegressorParameters::<T, D>::default_k")
+    )]
     /// number of training samples to consider when estimating class for new point. Default value is 3.
     pub k: usize,
     #[cfg_attr(feature = "serde", serde(default))]
@@ -82,6 +85,10 @@ pub struct KNNRegressor<T: RealNumber, D: Distance<Vec<T>, T>> {
 }
 
 impl<T: RealNumber, D: Distance<Vec<T>, T>> KNNRegressorParameters<T, D> {
+    fn default_k() -> usize {
+        5
+    }
+
     /// number of training samples to consider when estimating class for new point. Default value is 3.
     pub fn with_k(mut self, k: usize) -> Self {
         self.k = k;
@@ -120,7 +127,7 @@ impl<T: RealNumber> Default for KNNRegressorParameters<T, Euclidian> {
             distance: Distances::euclidian(),
             algorithm: KNNAlgorithmName::default(),
             weight: KNNWeightFunction::default(),
-            k: 3,
+            k: Self::default_k(),
             t: PhantomData,
         }
     }
