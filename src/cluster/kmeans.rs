@@ -106,10 +106,10 @@ impl<T: RealNumber> PartialEq for KMeans<T> {
 #[derive(Debug, Clone)]
 /// K-Means clustering algorithm parameters
 pub struct KMeansParameters {
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[cfg_attr(feature = "serde", serde(default = "KMeansParameters::default_k"))]
     /// Number of clusters.
     pub k: usize,
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[cfg_attr(feature = "serde", serde(default = "KMeansParameters::default_max_iter"))]
     /// Maximum number of iterations of the k-means algorithm for a single run.
     pub max_iter: usize,
     #[cfg_attr(feature = "serde", serde(default))]
@@ -119,6 +119,14 @@ pub struct KMeansParameters {
 }
 
 impl KMeansParameters {
+    fn default_k() {
+        8
+    }
+
+    fn default_max_iter() {
+        300
+    }
+
     /// Number of clusters.
     pub fn with_k(mut self, k: usize) -> Self {
         self.k = k;
@@ -134,8 +142,8 @@ impl KMeansParameters {
 impl Default for KMeansParameters {
     fn default() -> Self {
         KMeansParameters {
-            k: 2,
-            max_iter: 100,
+            k: Self::default_k(),
+            max_iter: Self::default_max_iter(),
             seed: None,
         }
     }

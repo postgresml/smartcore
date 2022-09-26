@@ -85,7 +85,26 @@ pub struct DBSCANParameters<T: RealNumber, D: Distance<Vec<T>, T>> {
     pub algorithm: KNNAlgorithmName,
 }
 
+impl<T: RealNumber> Default for DBSCANParameters<T, Euclidian> {
+    fn default() -> Self {
+        DBSCANParameters {
+            distance: Distances::euclidian(),
+            min_samples: DBSCANParameters<T, Euclidian>::default_min_samples(),
+            eps: DBSCANParameters<T, Euclidian>::default_eps(),
+            algorithm: KNNAlgorithmName::default(),
+        }
+    }
+}
+
 impl<T: RealNumber, D: Distance<Vec<T>, T>> DBSCANParameters<T, D> {
+    fn default_min_samples() {
+        5
+    }
+
+    fn default_eps() {
+        T::half()
+    }
+
     /// a function that defines a distance between each pair of point in training data.
     /// This function should extend [`Distance`](../../math/distance/trait.Distance.html) trait.
     /// See [`Distances`](../../math/distance/struct.Distances.html) for a list of available functions.
@@ -221,17 +240,6 @@ impl<T: RealNumber, D: Distance<Vec<T>, T>> PartialEq for DBSCAN<T, D> {
             && self.num_classes == other.num_classes
             && self.eps == other.eps
             && self.cluster_labels == other.cluster_labels
-    }
-}
-
-impl<T: RealNumber> Default for DBSCANParameters<T, Euclidian> {
-    fn default() -> Self {
-        DBSCANParameters {
-            distance: Distances::euclidian(),
-            min_samples: 5,
-            eps: T::half(),
-            algorithm: KNNAlgorithmName::default(),
-        }
     }
 }
 
